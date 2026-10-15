@@ -10,7 +10,10 @@ App đọc sách cá nhân (Android, iOS build được), lấy cảm hứng t�
 - **Dịch offline** (Google ML Kit, tải model ~30MB/ngôn ngữ lần đầu), tự nhận diện ngôn ngữ nguồn.
 - **Nguồn online qua extension JS** (QuickJS): tìm → chi tiết → mục lục → đọc / tải toàn bộ về máy; nút ⟳ trong reader cập nhật chương mới cho truyện đang ra.
 
-Chưa làm: Office (DOC/DOCX/ODT), giọng AI, trình duyệt tích hợp, sync, desktop.
+- **Trình duyệt tích hợp** (tab Nguồn → 🌐): duyệt trang nguồn, bấm **Thêm** khi đang ở trang truyện khớp với một extension.
+  Cookie (đăng nhập, vượt Cloudflare) được dùng lại cho extension, cùng User-Agent.
+
+Chưa làm: Office (DOC/DOCX/ODT), giọng AI, sync, desktop.
 
 ## Build
 ```bash
@@ -33,8 +36,11 @@ Thêm vào GitHub repo → Settings → Secrets → Actions: `ANDROID_KEYSTORE_B
 Một extension là file `.zip` chứa thư mục có `plugin.json` và 4 script. Xem mẫu ở `extensions/sample/`.
 
 ```json
-{ "id": "my-source", "name": "Tên nguồn", "version": "1", "source": "https://example.com" }
+{ "id": "my-source", "name": "Tên nguồn", "version": "1", "source": "https://example.com",
+  "regexp": "^https://example\\.com/truyen/[^/]+/?$" }
 ```
+
+`regexp` (tuỳ chọn) khớp URL trang truyện để nút **Thêm** trong trình duyệt biết trang nào là trang truyện; không có thì mọi trang cùng domain với `source` đều coi là khớp.
 
 Mỗi script khai báo `execute(arg)` (có thể `async`) và trả về:
 

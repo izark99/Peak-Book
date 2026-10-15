@@ -22,11 +22,69 @@ import 'package:path_provider/path_provider.dart';
 ///           absUrl(base, href), SOURCE (plugin.json "source").
 class Ext {
   final String id, name, version, source, dir;
+
+  /// Optional pattern for book-page urls this source handles (used by the browser's "add" button).
+  final String? regexp;
   Ext(this.dir, Map<String, dynamic> j)
       : id = j['id'] as String? ?? p.basename(dir),
         name = j['name'] as String? ?? p.basename(dir),
         version = '${j['version'] ?? ''}',
-        source = j['source'] as String? ?? '';
+        source = j['source'] as String? ?? '',
+        regexp = j['regexp'] as String?;
+}
+
+/// Extension that handles [url]: its `regexp` if set, else same host as its `source`.
+Ext? extForUrl(List<Ext> exts, String url) {
+  final host = Uri.tryParse(url)?.host;
+  if (host == null || host.isEmpty) return null;
+  for (final e in exts) {
+    final re = e.regexp;
+    if (re != null ? RegExp(re).hasMatch(url) : Uri.tryParse(e.source)?.host == host) return e;
+  }
+  return null;
+}
+
+/// Shared by extension fetches and the in-app browser so sites (e.g. Cloudflare) see one client.
+const userAgent =
+    'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36';
+
+/// Cookies captured from the in-app browser, by host; sent with extension fetches to that host or its subdomains.
+// ponytail: only non-HttpOnly cookies (read via document.cookie); use a native cookie API if a site needs HttpOnly ones.
+class CookieJar {
+  static final _cookies = <String, String>{};
+  static bool _loaded = false;
+
+  static Future<File> _file() async => File(p.join((await _root()).path, '.cookies.json'));
+
+  static Future<void> _load() async {
+    if (_loaded) return;
+    _loaded = true;
+    try {
+      final f = await _file();
+      if (f.existsSync()) _cookies.addAll(Map<String, String>.from(jsonDecode(await f.readAsString())));
+    } catch (_) {
+      // Corrupt file: start empty.
+    }
+  }
+
+  static Future<void> set(String host, String cookie) async {
+    await _load();
+    if (cookie.isEmpty || _cookies[host] == cookie) return;
+    _cookies[host] = cookie;
+    await (await _file()).writeAsString(jsonEncode(_cookies));
+  }
+
+  static Future<String?> forUrl(String url) async {
+    await _load();
+    return cookieFor(_cookies, url);
+  }
+}
+
+String? cookieFor(Map<String, String> cookies, String url) {
+  final host = Uri.tryParse(url)?.host ?? '';
+  final match = cookies.keys.where((h) => host == h || host.endsWith('.$h')).toList()
+    ..sort((a, b) => a.length.compareTo(b.length));
+  return match.isEmpty ? null : match.map((h) => cookies[h]).join('; ');
 }
 
 class ExtError implements Exception {
@@ -152,10 +210,13 @@ class ExtRunner {
     String result;
     try {
       final req = http.Request((opts['method'] as String? ?? 'GET').toUpperCase(), Uri.parse(url))
-        ..headers['User-Agent'] =
-            'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36'
+        ..headers['User-Agent'] = userAgent
         ..headers.addAll({for (final e in (opts['headers'] as Map? ?? {}).entries) '${e.key}': '${e.value}'});
       if (opts['body'] != null) req.body = '${opts['body']}';
+      if (!req.headers.keys.any((k) => k.toLowerCase() == 'cookie')) {
+        final cookie = await CookieJar.forUrl(url);
+        if (cookie != null) req.headers['Cookie'] = cookie;
+      }
       final res = await http.Response.fromStream(await _client.send(req).timeout(timeout));
       // ponytail: UTF-8 only; add charset sniffing (gbk, etc.) if a source needs it.
       result = 'null, ${jsonEncode({

@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import 'browser_screen.dart';
 import 'db.dart';
 import 'extensions.dart';
 import 'main.dart';
@@ -52,6 +53,11 @@ class _SourcesScreenState extends State<SourcesScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('Nguồn'), actions: [
+          IconButton(
+            tooltip: 'Trình duyệt',
+            icon: const Icon(Icons.public),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BrowserScreen())),
+          ),
           PopupMenuButton(
             icon: const Icon(Icons.add),
             itemBuilder: (_) => [
@@ -99,6 +105,14 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
+          actions: [
+            IconButton(
+              tooltip: 'Mở trang web',
+              icon: const Icon(Icons.public),
+              onPressed: () => Navigator.push(
+                  context, MaterialPageRoute(builder: (_) => BrowserScreen(url: widget.ext.source))),
+            ),
+          ],
           title: TextField(
             autofocus: true,
             textInputAction: TextInputAction.search,

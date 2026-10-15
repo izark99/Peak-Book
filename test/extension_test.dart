@@ -52,6 +52,22 @@ void main() {
     expect(chap, contains(r'`hai` ${x}'));
   });
 
+  test('extForUrl prefers regexp, falls back to source host', () {
+    final byRe = Ext('a', {'id': 'a', 'source': 'https://a.com', 'regexp': r'^https://a\.com/book/\d+'});
+    final byHost = Ext('b', {'id': 'b', 'source': 'https://b.com'});
+    expect(extForUrl([byRe, byHost], 'https://a.com/book/12')?.id, 'a');
+    expect(extForUrl([byRe, byHost], 'https://a.com/'), isNull);
+    expect(extForUrl([byRe, byHost], 'https://b.com/any/page')?.id, 'b');
+    expect(extForUrl([byRe, byHost], 'https://c.com/'), isNull);
+  });
+
+  test('cookieFor matches host and parent domains', () {
+    final jar = {'site.com': 'a=1', 'm.site.com': 'b=2', 'other.com': 'c=3'};
+    expect(cookieFor(jar, 'https://m.site.com/x'), 'a=1; b=2');
+    expect(cookieFor(jar, 'https://site.com/'), 'a=1');
+    expect(cookieFor(jar, 'https://notsite.com/'), isNull);
+  });
+
   test('script errors surface as ExtError', () async {
     await expectLater(ExtRunner.instance.run(ext, 'chap', '${base()}/chap/404'), throwsA(isA<ExtError>()));
     await expectLater(ExtRunner.instance.run(ext, 'missing', null), throwsA(isA<ExtError>()));
