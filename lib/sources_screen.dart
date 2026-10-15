@@ -154,7 +154,6 @@ class _DetailScreenState extends State<DetailScreen> {
     final existing = await db.query('books',
         where: 'format = ? AND path = ? AND ext = ?', whereArgs: ['web', widget.url, widget.ext.id]);
     if (existing.isNotEmpty) return Book.fromMap(existing.first);
-    // ponytail: TOC is a snapshot; add "refresh chapters" when following ongoing stories matters.
     final id = await insertBook({
       'title': d['name'] ?? widget.name,
       'author': d['author'],
