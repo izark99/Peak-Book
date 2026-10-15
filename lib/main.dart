@@ -6,6 +6,7 @@ import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'ai_voice.dart';
 import 'db.dart';
 import 'import.dart';
 import 'reader_comic.dart';
@@ -20,6 +21,7 @@ class Settings {
   static final fontSize = ValueNotifier(18.0);
   static final targetLang = ValueNotifier(TranslateLanguage.vietnamese);
   static final ttsRate = ValueNotifier(0.5);
+  static final aiVoice = ValueNotifier(false);
 
   static Future<void> load() async {
     _prefs = await SharedPreferences.getInstance();
@@ -27,6 +29,8 @@ class Settings {
     fontSize.value = _prefs.getDouble('fontSize') ?? 18;
     targetLang.value = TranslateLanguage.values.byName(_prefs.getString('targetLang') ?? 'vietnamese');
     ttsRate.value = _prefs.getDouble('ttsRate') ?? 0.5;
+    aiVoice.value = _prefs.getBool('aiVoice') ?? false;
+    aiVoice.addListener(() => _prefs.setBool('aiVoice', aiVoice.value));
     dark.addListener(() => _prefs.setBool('dark', dark.value));
     fontSize.addListener(() => _prefs.setDouble('fontSize', fontSize.value));
     targetLang.addListener(() => _prefs.setString('targetLang', targetLang.value.name));
@@ -212,7 +216,7 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('Cài đặt')),
         body: ListenableBuilder(
-          listenable: Listenable.merge([Settings.dark, Settings.fontSize, Settings.targetLang, Settings.ttsRate]),
+          listenable: Listenable.merge([Settings.dark, Settings.fontSize, Settings.targetLang, Settings.ttsRate, Settings.aiVoice]),
           builder: (_, _) => ListView(children: [
             SwitchListTile(
               title: const Text('Giao diện tối'),
@@ -231,6 +235,7 @@ class SettingsScreen extends StatelessWidget {
                   min: 0.1, max: 1, divisions: 18, value: Settings.ttsRate.value,
                   onChanged: (v) => Settings.ttsRate.value = v),
             ),
+            const AiVoiceTile(),
             ListTile(
               title: const Text('Dịch sang'),
               trailing: DropdownButton<TranslateLanguage>(
@@ -244,4 +249,74 @@ class SettingsScreen extends StatelessWidget {
           ]),
         ),
       );
+}
+
+/// Switch for the offline AI voice; downloads it (~67MB) the first time it is turned on.
+class AiVoiceTile extends StatefulWidget {
+  const AiVoiceTile({super.key});
+  @override
+  State<AiVoiceTile> createState() => _AiVoiceTileState();
+}
+
+class _AiVoiceTileState extends State<AiVoiceTile> {
+  bool installed = false;
+  double? progress;
+
+  @override
+  void initState() {
+    super.initState();
+    AiVoice.installed().then((v) => mounted ? setState(() => installed = v) : null);
+  }
+
+  Future<void> _toggle(bool on) async {
+    if (!on || installed) return setState(() => Settings.aiVoice.value = on);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Tải giọng AI tiếng Việt?'),
+        content: const Text('Khoảng 67MB, chỉ tải một lần. Sau đó đọc offline hoàn toàn.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Huỷ')),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Tải')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => progress = 0);
+    try {
+      await AiVoice.install((v) => mounted ? setState(() => progress = v) : null);
+      installed = true;
+      Settings.aiVoice.value = true;
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Tải giọng lỗi: $e')));
+    }
+    if (mounted) setState(() => progress = null);
+  }
+
+  Future<void> _remove() async {
+    await AiVoice.uninstall();
+    Settings.aiVoice.value = false;
+    if (mounted) setState(() => installed = false);
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(children: [
+        SwitchListTile(
+          title: const Text('Giọng AI tiếng Việt (offline)'),
+          subtitle: Text(progress != null
+              ? 'Đang tải ${(progress! * 100).round()}%'
+              : installed
+                  ? 'Đã cài. Chỉ dùng khi đọc tiếng Việt; ngôn ngữ khác vẫn dùng giọng hệ thống.'
+                  : 'Chưa cài (~67MB)'),
+          value: Settings.aiVoice.value && installed,
+          onChanged: progress == null ? _toggle : null,
+        ),
+        if (progress != null) LinearProgressIndicator(value: progress),
+        if (installed && progress == null)
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(onPressed: _remove, child: const Text('Xoá giọng AI')),
+          ),
+      ]);
 }
