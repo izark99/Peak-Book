@@ -8,6 +8,7 @@ import 'package:google_mlkit_language_id/google_mlkit_language_id.dart';
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:html/parser.dart' as html_parser;
 
+import 'ai_voice.dart';
 import 'db.dart';
 import 'extensions.dart';
 import 'main.dart';
@@ -77,6 +78,7 @@ class _TextReaderState extends State<TextReader> {
   void dispose() {
     speaking = false;
     tts.stop();
+    AiVoice.stop();
     saveProgress(book);
     scroll.dispose();
     super.dispose();
@@ -174,21 +176,32 @@ class _TextReaderState extends State<TextReader> {
   Future<void> _toggleSpeak() async {
     if (speaking) {
       setState(() => speaking = false);
-      await tts.stop();
+      await Future.wait([tts.stop(), AiVoice.stop()]);
       return;
     }
     setState(() => speaking = true);
+    final aiInstalled = Settings.aiVoice.value && await AiVoice.installed();
     var start = speakingAt >= 0 ? speakingAt : (book.offset * paras.length).floor();
     while (speaking && mounted) {
       final lines = showTranslation && translated != null ? translated! : paras;
       await tts.setSpeechRate(Settings.ttsRate.value);
       final lang = showTranslation ? Settings.targetLang.value.bcpCode : await _detectLang();
       if (lang != 'und') await tts.setLanguage(lang);
+      final ai = useAiVoice(enabled: Settings.aiVoice.value, installed: aiInstalled, lang: lang);
       for (var p = start.clamp(0, lines.length); p < lines.length && speaking && mounted; p++) {
         setState(() => speakingAt = p);
         final ctx = paraKeys.elementAtOrNull(p)?.currentContext;
         if (ctx != null && ctx.mounted) Scrollable.ensureVisible(ctx, alignment: 0.2, duration: const Duration(milliseconds: 300));
-        await tts.speak(lines[p]);
+        if (ai) {
+          try {
+            await AiVoice.speak(lines[p], Settings.ttsRate.value, next: lines.elementAtOrNull(p + 1));
+          } catch (e) {
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+            setState(() => speaking = false);
+          }
+        } else {
+          await tts.speak(lines[p]);
+        }
       }
       if (!speaking || !mounted) break;
       if (index + 1 >= chapters.length) break;

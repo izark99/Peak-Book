@@ -7,13 +7,14 @@ App đọc sách cá nhân (Android, iOS build được), lấy cảm hứng t�
   MOBI/AZW được chuyển sang EPUB lúc nhập (thư viện `kindle_unpack`, **GPL-3**); file có DRM không mở được.
 - Reader văn bản (EPUB/TXT/truyện online): cỡ chữ, sáng/tối, mục lục, bookmark.
 - **TTS** bằng giọng hệ thống, tự sang chương sau, tô sáng đoạn đang đọc.
+  Tuỳ chọn **giọng AI tiếng Việt offline** (sherpa-onnx + Piper `vi_VN-vais1000-medium`, tải ~67MB khi bật lần đầu trong Cài đặt); ngôn ngữ khác vẫn dùng giọng hệ thống.
 - **Dịch offline** (Google ML Kit, tải model ~30MB/ngôn ngữ lần đầu), tự nhận diện ngôn ngữ nguồn.
 - **Nguồn online qua extension JS** (QuickJS): tìm → chi tiết → mục lục → đọc / tải toàn bộ về máy; nút ⟳ trong reader cập nhật chương mới cho truyện đang ra.
 
 - **Trình duyệt tích hợp** (tab Nguồn → 🌐): duyệt trang nguồn, bấm **Thêm** khi đang ở trang truyện khớp với một extension.
   Cookie (đăng nhập, vượt Cloudflare), kể cả cookie HttpOnly, được dùng lại cho extension, cùng User-Agent.
 
-Chưa làm: Office (DOC/DOCX/ODT), giọng AI, sync, desktop.
+Chưa làm: Office (DOC/DOCX/ODT), sync, desktop.
 
 ## Build
 ```bash
@@ -22,7 +23,7 @@ tool/test.sh                  # unit test (cần QuickJS lib của flutter_js, s
 flutter build apk --release --split-per-abi   # build/app/outputs/flutter-apk/app-<abi>-release.apk
 ```
 CI (`.github/workflows/apk.yml`) build APK mỗi lần push; push tag `v*` sẽ đính APK vào GitHub Release.
-Có 3 file theo loại CPU; điện thoại hiện nay hầu hết dùng **`app-arm64-v8a-release.apk`** (~45MB).
+Có 3 file theo loại CPU; điện thoại hiện nay hầu hết dùng **`app-arm64-v8a-release.apk`** (~75MB, trong đó ~25MB là engine giọng AI).
 
 ### Ký APK cố định (nên làm một lần)
 Không có key cố định thì mỗi bản build ký bằng debug key khác nhau, Android sẽ không cho cài đè và phải gỡ app (mất thư viện).
