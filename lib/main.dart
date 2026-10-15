@@ -101,7 +101,7 @@ class LibraryScreen extends StatelessWidget {
     final files = await FilePicker.pickFiles();
     for (final f in files) {
       try {
-        if (!importExtensions.contains((f.extension ?? '').toLowerCase())) {
+        if (!importExtensions.contains(formatOf(f.name))) {
           throw FormatException('Chưa hỗ trợ ${f.name}');
         }
         await importFile(f);

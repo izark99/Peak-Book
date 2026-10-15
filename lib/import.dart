@@ -10,8 +10,15 @@ import 'package:path_provider/path_provider.dart';
 
 import 'db.dart';
 import 'epub.dart';
+import 'fb2.dart';
 
-const importExtensions = ['epub', 'mobi', 'azw', 'azw3', 'prc', 'txt', 'pdf', 'cbz', 'zip'];
+const importExtensions = ['epub', 'mobi', 'azw', 'azw3', 'prc', 'fb2', 'fbz', 'txt', 'pdf', 'cbz', 'zip'];
+
+/// Lower-case format key from a file name; `.fb2.zip` counts as fbz.
+String formatOf(String name) {
+  final n = name.toLowerCase();
+  return n.endsWith('.fb2.zip') ? 'fbz' : p.extension(n).replaceFirst('.', '');
+}
 const _imageExt = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'};
 
 Future<Directory> _newBookDir() async {
@@ -22,7 +29,7 @@ Future<Directory> _newBookDir() async {
 
 /// Copies a picked file into app storage and adds it to the library.
 Future<void> importFile(PlatformFile file) async {
-  final ext = (file.extension ?? '').toLowerCase();
+  final ext = formatOf(file.name);
   final name = p.basenameWithoutExtension(file.name);
   final dir = await _newBookDir();
   try {
@@ -35,6 +42,24 @@ Future<void> importFile(PlatformFile file) async {
         await kindleToEpub(src, p.join(dir.path, 'source.epub'));
         await File(src).delete();
         await _addEpub(p.join(dir.path, 'source.epub'), dir.path);
+      case 'fb2' || 'fbz':
+        var fb2 = src;
+        if (ext == 'fbz') {
+          await unzipToDir(src, p.join(dir.path, 'fbz'));
+          fb2 = Directory(p.join(dir.path, 'fbz'))
+              .listSync(recursive: true)
+              .whereType<File>()
+              .firstWhere((f) => f.path.toLowerCase().endsWith('.fb2'),
+                  orElse: () => throw const FormatException('Không có file .fb2 trong gói'))
+              .path;
+        }
+        final images = await Directory(p.join(dir.path, 'images')).create();
+        final xml = decodeFb2(await File(fb2).readAsBytes());
+        final book = await Isolate.run(() => parseFb2(xml, images.path));
+        await insertBook(
+          {'title': book.title, 'author': book.author, 'cover': book.cover, 'format': 'fb2', 'path': src},
+          [for (final c in book.chapters) {'title': c.title, 'content': c.html}],
+        );
       case 'txt':
         final text = utf8.decode(await File(src).readAsBytes(), allowMalformed: true);
         await insertBook(
