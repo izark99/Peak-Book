@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "name": "wattpad.com",
+    "author": "extension-builder (viết tay)",
+    "version": 1,
+    "source": "https://www.wattpad.com",
+    "regexp": "^https?://(?:www\\.)?wattpad\\.com/story/\\d+",
+    "description": "Đọc truyện từ Wattpad qua API JSON",
+    "locale": "vi_VN",
+    "language": "javascript",
+    "type": "novel"
+  },
+  "script": {
+    "home": "home.js",
+    "genre": "genre.js",
+    "detail": "detail.js",
+    "search": "search.js",
+    "toc": "toc.js",
+    "chap": "chap.js"
+  }
+}

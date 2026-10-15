@@ -50,6 +50,7 @@ function create(input, outRoot) {
     say('• Link không phải trang truyện, đang tìm 1 truyện mẫu...');
     const home = new URL(first.url).pathname === '/' ? first : D.load(origin + '/');
     storyUrl = home.error ? null : findStory(home);
+    if (!storyUrl && (D.jsRendered(first) || D.jsRendered(home))) throw new Error(D.JS_MSG);
     if (!storyUrl) throw new Error('Không tìm được trang truyện có danh sách chương. Hãy đưa link trang giới thiệu 1 truyện cụ thể.');
   }
   const story = storyUrl === first.url ? first : D.load(storyUrl);
@@ -61,6 +62,7 @@ function create(input, outRoot) {
 
   // 2. Table of contents (on the story page or on a linked "all chapters" page)
   const { toc, tocLink } = D.findToc(story, storyRe);
+  if (!toc && D.jsRendered(story)) throw new Error(D.JS_MSG);
   if (!toc) notes.push('Không tìm thấy danh sách chương (có thể load bằng AJAX/JS). toc.js đang dùng chế độ đoán theo tên "Chương/Chapter" — cần sửa TOC trong config.js.');
 
   // 3. Chapter content
@@ -102,7 +104,6 @@ function create(input, outRoot) {
 
   // 5. Search: the site's own form first, then common URL patterns. Verified by searching a real title.
   const kw = (nameEl || '').split(/\s+/).slice(0, 3).join(' ') || 'a';
-  const homeLinks = new Set(home.error ? [] : home.$('a[href]').toArray().map((a) => D.abs(a.attribs.href, home.url)));
   const cands = [];
   if (!home.error) home.$('form').each((_, f) => {
     const inp = home.$(f).find('input[type=search], input[type=text], input:not([type])').filter((_, i) => i.attribs.name)[0];
@@ -116,11 +117,13 @@ function create(input, outRoot) {
   for (const c of cands) {
     const p = D.load(c.replace('{key}', encodeURIComponent(kw)));
     if (p.error) continue;
-    // A real result page links a story matching the keyword and isn't just the home page again.
-    const links = p.$('a[href]').toArray().filter((a) => storyRe.test(D.abs(a.attribs.href, p.url)));
-    const hit = links.some((a) => D.text(p.$, a).toLowerCase().includes(kw.toLowerCase()));
-    const same = links.filter((a) => homeLinks.has(D.abs(a.attribs.href, p.url))).length / (links.length || 1);
-    if (hit && same < 0.8) { addList(p); SEARCH = c.replace(origin, ''); say(`• Search: ${c}`); break; }
+    // A real search links a story matching the keyword, and a nonsense keyword gives a different page
+    // (an endpoint that ignores the query returns the same links both times).
+    const storyLinks = (pg) => pg.$('a[href]').toArray().filter((a) => storyRe.test(D.abs(a.attribs.href, pg.url)));
+    if (!storyLinks(p).some((a) => D.text(p.$, a).toLowerCase().includes(kw.toLowerCase()))) continue;
+    const ctrl = D.load(c.replace('{key}', 'zqxjkvwq'));
+    const key = (pg) => (pg.error ? '' : storyLinks(pg).map((a) => D.abs(a.attribs.href, pg.url)).join());
+    if (key(ctrl) !== key(p)) { addList(p); SEARCH = c.replace(origin, ''); say(`• Search: ${c}`); break; }
   }
   if (!SEARCH) notes.push('Không tìm thấy cách search (có thể dùng POST/AJAX).');
 
@@ -158,7 +161,8 @@ function create(input, outRoot) {
 
   // Prefer real PNGs; favicon.ico is the last resort.
   const iconHref = home.error ? '' : ['link[rel~=icon][href*=".png"]', 'link[rel=apple-touch-icon]', 'link[rel~=icon]'].map((q) => home.$(q).attr('href')).find(Boolean);
-  const icon = httpGet(D.abs(iconHref || '/favicon.ico', origin));
+  let icon = httpGet(D.abs(iconHref || '/apple-touch-icon.png', origin));
+  if (!icon.ok && !iconHref) icon = httpGet(origin + '/favicon.ico');
   if (icon.ok && icon.buf.length) fs.writeFileSync(path.join(dir, 'icon.png'), icon.buf);
 
   say(`\n✔ Đã tạo ${dir}\n✔ Đóng gói ${pack(dir)}`);

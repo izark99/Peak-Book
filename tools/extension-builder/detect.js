@@ -25,6 +25,17 @@ function abs(href, base) {
 }
 const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; } };
 
+// Apps (React/Next/Vue...) ship data + code instead of content: inline scripts dominate the HTML.
+// Measured: Wattpad 25-46%, plain HTML novel sites 0-3%.
+function jsRendered(page) {
+  if (!page || !page.$) return false;
+  const html = page.$.html();
+  const scripts = page.$('script:not([src])').toArray().reduce((n, s) => n + (page.$(s).html() || '').length, 0);
+  return scripts / html.length >= 0.2 || /__NEXT_DATA__|__NUXT__|data-reactroot|ng-version|window\.__remixContext/.test(html);
+}
+const JS_MSG = 'Site render bằng JavaScript (kiểu app React/Next/Vue): HTML tải về không chứa danh sách chương/nội dung, nên tool không tự nhận diện được. ' +
+  'Cần viết tay extension gọi thẳng API JSON của site (mở DevTools > Network > Fetch/XHR để tìm API). Mẫu: extensions/wattpad.com.';
+
 // ---------- selector building ----------
 const classes = (el) => ((el.attribs && el.attribs.class) || '').split(/\s+/).filter((c) => c && IDENT.test(c) && !DYNAMIC.test(c));
 function token(el, withId = true) {
@@ -252,4 +263,4 @@ function detectList(page, storyRe) {
   return null;
 }
 
-module.exports = { findToc, listSel, load, abs, host, storyPattern, detectToc, detectContent, detectDetail, detectList, groups, isChapter, text, CHAPTER_RE, single };
+module.exports = { jsRendered, JS_MSG, findToc, listSel, load, abs, host, storyPattern, detectToc, detectContent, detectDetail, detectList, groups, isChapter, text, CHAPTER_RE, single };

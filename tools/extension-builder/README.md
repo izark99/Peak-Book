@@ -42,12 +42,13 @@ Runtime có fallback nhiều tầng: selector đã nhận diện → meta `og:*`
 
 ## Giới hạn (cần biết)
 
-Không tool nào đảm bảo 100% mọi site. Đã test pass đầy đủ: truyenfull, dtruyen/wetruyen,
+Không tool nào đảm bảo 100% mọi site. Wattpad là extension viết tay (dùng API), không phải tool sinh ra. Đã test pass đầy đủ: truyenfull, dtruyen/wetruyen,
 readnovelfull, allnovelfull/novgo, novelfire; piaotia (GBK) đọc được nhưng thiếu Home/Search.
 Các trường hợp tool **không** tự xử lý được — test sẽ báo ✘ kèm gợi ý:
 
 - Site bị Cloudflare challenge / bắt đăng nhập.
-- Nội dung hoặc danh sách chương render bằng JavaScript/AJAX (cần viết tay API call trong toc.js/chap.js).
+- Site render bằng JavaScript (app React/Next/Vue, ví dụ Wattpad). Tool tự nhận ra (script nhúng ≥ 20% HTML)
+  và báo thẳng. Cách xử lý: viết tay extension gọi API JSON của site — mẫu ở `extensions/wattpad.com`.
 - Search dùng POST hoặc site GBK cần encode từ khoá GBK.
 - Nội dung chương bị mã hoá / chống copy.
 

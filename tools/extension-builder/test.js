@@ -34,6 +34,9 @@ assert.equal(r.name[0][0], 'h1.title');
 assert.equal(r.desc[0][0], 'div.desc-text');
 assert.equal(r.info, 'div.info');
 
+assert(!D.jsRendered(story));
+assert(D.jsRendered(page('https://app.x/', `<body><div id="root"></div><script>window.data=${JSON.stringify('x'.repeat(500))}</script></body>`)));
+
 // Runtime helpers on the detected config, through the Jsoup emulation.
 const ctx = vm.createContext({ BASE_URL: 'https://x.vn', LIST: [l], STORY_RE: re });
 vm.runInContext(fs.readFileSync(path.join(__dirname, 'runtime/lib.js'), 'utf8'), ctx);
