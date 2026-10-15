@@ -1,15 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:archive/archive_io.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:kindle_unpack/kindle_unpack.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'db.dart';
 import 'epub.dart';
 
-const importExtensions = ['epub', 'txt', 'pdf', 'cbz', 'zip'];
+const importExtensions = ['epub', 'mobi', 'azw', 'azw3', 'prc', 'txt', 'pdf', 'cbz', 'zip'];
 const _imageExt = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'};
 
 Future<Directory> _newBookDir() async {
@@ -28,12 +30,11 @@ Future<void> importFile(PlatformFile file) async {
     await File(src).writeAsBytes(await file.readAsBytes());
     switch (ext) {
       case 'epub':
-        await extractFileToDisk(src, dir.path);
-        final info = await parseEpubDir(dir.path);
-        await insertBook(
-          {'title': info.title, 'author': info.author, 'cover': info.cover, 'format': 'epub', 'path': dir.path},
-          [for (final c in info.chapters) {'title': c.title, 'url': c.path}],
-        );
+        await _addEpub(src, dir.path);
+      case 'mobi' || 'azw' || 'azw3' || 'prc':
+        await kindleToEpub(src, p.join(dir.path, 'source.epub'));
+        await File(src).delete();
+        await _addEpub(p.join(dir.path, 'source.epub'), dir.path);
       case 'txt':
         final text = utf8.decode(await File(src).readAsBytes(), allowMalformed: true);
         await insertBook(
@@ -44,7 +45,7 @@ Future<void> importFile(PlatformFile file) async {
         await insertBook({'title': name, 'format': 'pdf', 'path': src}, []);
       case 'cbz' || 'zip':
         final pages = p.join(dir.path, 'pages');
-        await extractFileToDisk(src, pages);
+        await unzipToDir(src, pages);
         await File(src).delete();
         final images = comicPages(pages);
         if (images.isEmpty) throw const FormatException('Không có ảnh trong file');
@@ -57,6 +58,34 @@ Future<void> importFile(PlatformFile file) async {
     rethrow;
   }
 }
+
+/// Unzips any zip-based file (.epub, .cbz, ...). archive's extractFileToDisk only accepts .zip/.tar names.
+Future<void> unzipToDir(String zip, String dir) async {
+  final input = InputFileStream(zip);
+  try {
+    await extractArchiveToDisk(ZipDecoder().decodeStream(input), dir);
+  } finally {
+    await input.close();
+  }
+}
+
+Future<void> _addEpub(String epub, String dir) async {
+  await unzipToDir(epub, dir);
+  final info = await parseEpubDir(dir);
+  await insertBook(
+    {'title': info.title, 'author': info.author, 'cover': info.cover, 'format': 'epub', 'path': dir},
+    [for (final c in info.chapters) {'title': c.title, 'url': c.path}],
+  );
+}
+
+/// Converts MOBI/AZW/AZW3 to EPUB off the UI thread. DRM-protected files throw.
+Future<void> kindleToEpub(String src, String dest) => Isolate.run(() {
+      try {
+        File(dest).writeAsBytesSync(KindleBook.fromBytes(File(src).readAsBytesSync()).toEpub());
+      } on KindleUnpackException catch (e) {
+        throw FormatException('Không đọc được file Kindle (có thể bị DRM): $e');
+      }
+    });
 
 /// Image files of an extracted comic, in natural order (2.jpg before 10.jpg).
 List<String> comicPages(String dir) {

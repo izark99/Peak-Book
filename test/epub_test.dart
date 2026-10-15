@@ -40,6 +40,29 @@ void main() {
     expect(info.chapters.map((c) => File(c.path).existsSync()), [true, true]);
   });
 
+  test('MOBI converts to an EPUB that parseEpubDir can read', () async {
+    // Fixture: Project Gutenberg #1342 (public domain), copied from the kindle_unpack package.
+    final dir = await Directory.systemTemp.createTemp('mobi');
+    addTearDown(() => dir.delete(recursive: true));
+    final epub = p.join(dir.path, 'book.epub');
+    await kindleToEpub('test/fixtures/pg1342.mobi', epub);
+    await unzipToDir(epub, dir.path);
+
+    final info = await parseEpubDir(dir.path);
+    expect(info.title, contains('Pride and Prejudice'));
+    expect(info.author, contains('Austen'));
+    expect(info.chapters, isNotEmpty);
+    final text = (await Future.wait(info.chapters.map((c) => File(c.path).readAsString()))).join();
+    expect(text, contains('truth universally acknowledged'));
+  });
+
+  test('kindleToEpub rejects non-Kindle bytes with FormatException', () async {
+    final dir = await Directory.systemTemp.createTemp('mobi');
+    addTearDown(() => dir.delete(recursive: true));
+    final bad = File(p.join(dir.path, 'bad.mobi'))..writeAsStringSync('not a mobi file');
+    await expectLater(kindleToEpub(bad.path, p.join(dir.path, 'x.epub')), throwsA(isA<FormatException>()));
+  });
+
   test('splitTxt splits on chapter headings and escapes html', () {
     final parts = splitTxt('Lời tựa\nChương 1: A\n<b>x</b>\n\nChương 2\ny\n');
     expect(parts.map((c) => c.title), ['Mở đầu', 'Chương 1: A', 'Chương 2']);

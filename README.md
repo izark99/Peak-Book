@@ -3,13 +3,14 @@
 App đọc sách cá nhân (Android, iOS build được), lấy cảm hứng từ vBook. Flutter, local-first, không backend.
 
 ## Tính năng (MVP)
-- Thư viện: nhập **EPUB, TXT, PDF, CBZ/ZIP**; giữ tiến độ đọc; xoá bằng nhấn giữ.
+- Thư viện: nhập **EPUB, MOBI/AZW/AZW3/PRC, TXT, PDF, CBZ/ZIP**; giữ tiến độ đọc; xoá bằng nhấn giữ.
+  MOBI/AZW được chuyển sang EPUB lúc nhập (thư viện `kindle_unpack`, **GPL-3**); file có DRM không mở được.
 - Reader văn bản (EPUB/TXT/truyện online): cỡ chữ, sáng/tối, mục lục, bookmark.
 - **TTS** bằng giọng hệ thống, tự sang chương sau, tô sáng đoạn đang đọc.
 - **Dịch offline** (Google ML Kit, tải model ~30MB/ngôn ngữ lần đầu), tự nhận diện ngôn ngữ nguồn.
 - **Nguồn online qua extension JS** (QuickJS): tìm → chi tiết → mục lục → đọc / tải toàn bộ về máy; nút ⟳ trong reader cập nhật chương mới cho truyện đang ra.
 
-Chưa làm: MOBI/AZW/FB2/Office, giọng AI, trình duyệt tích hợp, sync, desktop.
+Chưa làm: FB2/Office, giọng AI, trình duyệt tích hợp, sync, desktop.
 
 ## Build
 ```bash
