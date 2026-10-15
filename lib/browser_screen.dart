@@ -24,6 +24,7 @@ class BrowserScreen extends StatefulWidget {
 class _BrowserScreenState extends State<BrowserScreen> {
   final address = TextEditingController();
   late final WebViewController web;
+  final cookies = WebViewCookieManager();
   List<Ext> exts = [];
   Ext? match;
   int progress = 100;
@@ -66,15 +67,23 @@ class _BrowserScreenState extends State<BrowserScreen> {
   }
 
   Future<void> _captureCookies(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.host.isEmpty) return;
+    var js = '';
     try {
-      var c = await web.runJavaScriptReturningResult('document.cookie');
+      final c = await web.runJavaScriptReturningResult('document.cookie');
       // Android returns a JSON-encoded string, iOS the raw string.
-      if (c is String && c.startsWith('"')) c = jsonDecode(c);
-      final host = Uri.parse(url).host;
-      if (host.isNotEmpty) await CookieJar.set(host, '$c');
+      js = c is String && c.startsWith('"') ? jsonDecode(c) as String : '$c';
     } catch (_) {
-      // Pages without JS access (e.g. about:blank) have no cookies to share.
+      // Pages without JS access (e.g. about:blank).
     }
+    var native = <(String, String)>[];
+    try {
+      native = [for (final c in await cookies.getCookies(domain: uri)) (c.name, c.value)];
+    } catch (_) {
+      // Native store unavailable: keep what document.cookie gave.
+    }
+    await CookieJar.set(uri.host, mergeCookies(js, native));
   }
 
   void _add() {

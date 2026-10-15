@@ -11,7 +11,7 @@ App đọc sách cá nhân (Android, iOS build được), lấy cảm hứng t�
 - **Nguồn online qua extension JS** (QuickJS): tìm → chi tiết → mục lục → đọc / tải toàn bộ về máy; nút ⟳ trong reader cập nhật chương mới cho truyện đang ra.
 
 - **Trình duyệt tích hợp** (tab Nguồn → 🌐): duyệt trang nguồn, bấm **Thêm** khi đang ở trang truyện khớp với một extension.
-  Cookie (đăng nhập, vượt Cloudflare) được dùng lại cho extension, cùng User-Agent.
+  Cookie (đăng nhập, vượt Cloudflare), kể cả cookie HttpOnly, được dùng lại cho extension, cùng User-Agent.
 
 Chưa làm: Office (DOC/DOCX/ODT), giọng AI, sync, desktop.
 

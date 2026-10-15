@@ -49,7 +49,8 @@ const userAgent =
     'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36';
 
 /// Cookies captured from the in-app browser, by host; sent with extension fetches to that host or its subdomains.
-// ponytail: only non-HttpOnly cookies (read via document.cookie); use a native cookie API if a site needs HttpOnly ones.
+// ponytail: webview_flutter_android splits cookies on '=' and keeps the last part, so an HttpOnly cookie whose
+// value contains '=' arrives truncated; call the raw CookieManager.getCookie via pigeon if a source hits this.
 class CookieJar {
   static final _cookies = <String, String>{};
   static bool _loaded = false;
@@ -78,6 +79,21 @@ class CookieJar {
     await _load();
     return cookieFor(_cookies, url);
   }
+}
+
+/// Cookie header from the page's document.cookie plus the WebView's native store (which adds HttpOnly cookies).
+/// document.cookie wins on duplicate names: its values are exact.
+String mergeCookies(String jsCookie, Iterable<(String, String)> native) {
+  final out = <String, String>{};
+  for (final part in jsCookie.split(';')) {
+    final i = part.indexOf('=');
+    final name = (i < 0 ? part : part.substring(0, i)).trim();
+    if (name.isNotEmpty) out[name] = i < 0 ? '' : part.substring(i + 1).trim();
+  }
+  for (final (name, value) in native) {
+    if (name.trim().isNotEmpty) out.putIfAbsent(name.trim(), () => value);
+  }
+  return out.entries.map((e) => '${e.key}=${e.value}').join('; ');
 }
 
 String? cookieFor(Map<String, String> cookies, String url) {

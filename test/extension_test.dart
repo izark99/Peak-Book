@@ -68,6 +68,12 @@ void main() {
     expect(cookieFor(jar, 'https://notsite.com/'), isNull);
   });
 
+  test('mergeCookies keeps exact JS values and adds HttpOnly-only native cookies', () {
+    expect(mergeCookies('a=x=y; b=2', [('a', 'y'), ('sid', 's1'), ('', 'z')]), 'a=x=y; b=2; sid=s1');
+    expect(mergeCookies('', [('cf_clearance', 'abc')]), 'cf_clearance=abc');
+    expect(mergeCookies('', []), '');
+  });
+
   test('script errors surface as ExtError', () async {
     await expectLater(ExtRunner.instance.run(ext, 'chap', '${base()}/chap/404'), throwsA(isA<ExtError>()));
     await expectLater(ExtRunner.instance.run(ext, 'missing', null), throwsA(isA<ExtError>()));
