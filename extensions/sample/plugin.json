@@ -1,0 +1,6 @@
+{
+  "id": "sample",
+  "name": "Sample (demo)",
+  "version": "1",
+  "source": "http://127.0.0.1:8080"
+}
