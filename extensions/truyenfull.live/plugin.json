@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "name": "truyenfull.live",
+    "author": "extension-builder",
+    "version": 1,
+    "source": "https://truyenfull.live",
+    "regexp": "^https?://(?:www\\.)?truyenfull\\.live/[^/?#]+/?(?:[?#].*)?$",
+    "description": "Đọc truyện từ truyenfull.live",
+    "locale": "vi_VN",
+    "language": "javascript",
+    "type": "novel"
+  },
+  "script": {
+    "home": "home.js",
+    "genre": "genre.js",
+    "detail": "detail.js",
+    "search": "search.js",
+    "toc": "toc.js",
+    "chap": "chap.js"
+  }
+}
