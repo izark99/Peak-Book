@@ -16,9 +16,10 @@ Chưa làm: Office (DOC/DOCX/ODT), giọng AI, trình duyệt tích hợp, sync,
 ```bash
 flutter pub get
 tool/test.sh                  # unit test (cần QuickJS lib của flutter_js, script tự tìm)
-flutter build apk --release   # build/app/outputs/flutter-apk/app-release.apk
+flutter build apk --release --split-per-abi   # build/app/outputs/flutter-apk/app-<abi>-release.apk
 ```
 CI (`.github/workflows/apk.yml`) build APK mỗi lần push; push tag `v*` sẽ đính APK vào GitHub Release.
+Có 3 file theo loại CPU; điện thoại hiện nay hầu hết dùng **`app-arm64-v8a-release.apk`** (~45MB).
 
 ### Ký APK cố định (nên làm một lần)
 Không có key cố định thì mỗi bản build ký bằng debug key khác nhau, Android sẽ không cho cài đè và phải gỡ app (mất thư viện).
