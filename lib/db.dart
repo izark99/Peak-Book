@@ -75,6 +75,20 @@ Future<int> insertBook(Map<String, Object?> book, List<Map<String, Object?>> cha
       return id;
     });
 
+/// Appends chapters whose url is not in the book yet (keeps existing ones and their cache). Returns how many were added.
+Future<int> appendChapters(int bookId, List<({String title, String url})> toc) => db.transaction((t) async {
+      final rows = await t.query('chapters', columns: ['url', 'idx'], where: 'book_id = ?', whereArgs: [bookId]);
+      final known = {for (final r in rows) r['url']};
+      var idx = rows.fold(-1, (m, r) => r['idx'] as int > m ? r['idx'] as int : m) + 1;
+      final start = idx;
+      for (final c in toc) {
+        if (known.add(c.url)) {
+          await t.insert('chapters', {'book_id': bookId, 'idx': idx++, 'title': c.title, 'url': c.url});
+        }
+      }
+      return idx - start;
+    });
+
 Future<void> deleteBook(int id) => db.delete('books', where: 'id = ?', whereArgs: [id]);
 
 Future<void> saveProgress(Book b) =>

@@ -7,7 +7,7 @@ App đọc sách cá nhân (Android, iOS build được), lấy cảm hứng t�
 - Reader văn bản (EPUB/TXT/truyện online): cỡ chữ, sáng/tối, mục lục, bookmark.
 - **TTS** bằng giọng hệ thống, tự sang chương sau, tô sáng đoạn đang đọc.
 - **Dịch offline** (Google ML Kit, tải model ~30MB/ngôn ngữ lần đầu), tự nhận diện ngôn ngữ nguồn.
-- **Nguồn online qua extension JS** (QuickJS): tìm → chi tiết → mục lục → đọc / tải toàn bộ về máy.
+- **Nguồn online qua extension JS** (QuickJS): tìm → chi tiết → mục lục → đọc / tải toàn bộ về máy; nút ⟳ trong reader cập nhật chương mới cho truyện đang ra.
 
 Chưa làm: MOBI/AZW/FB2/Office, giọng AI, trình duyệt tích hợp, sync, desktop.
 

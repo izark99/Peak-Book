@@ -198,6 +198,29 @@ class _TextReaderState extends State<TextReader> {
     if (mounted) setState(() => speaking = false);
   }
 
+  bool refreshing = false;
+
+  /// Re-runs the source's toc.js and appends chapters published since the book was added.
+  Future<void> _refreshToc() async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => refreshing = true);
+    try {
+      final ext = (await listExtensions()).where((e) => e.id == book.ext).firstOrNull;
+      if (ext == null) throw ExtError('Chưa cài nguồn "${book.ext}"');
+      final toc = await ExtRunner.instance.run(ext, 'toc', book.path) as List;
+      final added = await appendChapters(
+          book.id, [for (final c in toc.cast<Map>()) (title: '${c['name']}', url: '${c['url']}')]);
+      final list = await listChapters(book.id);
+      if (!mounted) return;
+      setState(() => chapters = list);
+      messenger.showSnackBar(SnackBar(content: Text(added == 0 ? 'Không có chương mới' : 'Thêm $added chương mới')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Cập nhật mục lục lỗi: $e')));
+    } finally {
+      if (mounted) setState(() => refreshing = false);
+    }
+  }
+
   Future<void> _addBookmark() async {
     final label = '${chapters[index].title} · ${(book.offset * 100).round()}%';
     await addBookmark(book.id, index, book.offset, label);
@@ -236,6 +259,14 @@ class _TextReaderState extends State<TextReader> {
       appBar: AppBar(
         title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
+          if (book.format == 'web')
+            IconButton(
+              tooltip: 'Cập nhật mục lục',
+              icon: refreshing
+                  ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.refresh),
+              onPressed: refreshing ? null : _refreshToc,
+            ),
           IconButton(icon: const Icon(Icons.bookmark_add_outlined), onPressed: html == null ? null : _addBookmark),
           IconButton(icon: const Icon(Icons.bookmarks_outlined), onPressed: _showBookmarks),
         ],
