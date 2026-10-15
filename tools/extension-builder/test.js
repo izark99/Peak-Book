@@ -43,4 +43,14 @@ assert.equal(items[0].cover, 'https://x.vn/a.jpg');
 assert.equal(ctx.nextUrl(parseHtml(list.$.html()), list.url), 'https://x.vn/danh-sach/moi/?page=2');
 assert.equal(ctx.nextUrl(parseHtml(story.$.html()), story.url), 'https://x.vn/ten-truyen/trang-2/');
 assert.equal(ctx.img(parseHtml(story.$.html()).select('img').first()), 'https://x.vn/c.jpg');
+// plugin.zip: first entry round-trips through the local header.
+const os = require('os');
+const zlib = require('zlib');
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ext-'));
+fs.writeFileSync(path.join(tmp, 'plugin.json'), '{"a":"Truyện"}');
+const zip = fs.readFileSync(require('./pack').pack(tmp));
+const nameLen = zip.readUInt16LE(26), size = zip.readUInt32LE(18);
+assert.equal(zip.toString('utf8', 30, 30 + nameLen), 'plugin.json');
+assert.equal(zlib.inflateRawSync(zip.subarray(30 + nameLen, 30 + nameLen + size)).toString(), '{"a":"Truyện"}');
+fs.rmSync(tmp, { recursive: true });
 console.log('ok');

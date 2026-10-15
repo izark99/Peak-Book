@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 // Usage:
+//   node cli.js pack <extDir>             (re)build <extDir>/plugin.zip after manual edits
 //   node cli.js <url> [--out <dir>]     create an extension from a story or home page URL
 //   node cli.js test <extDir> [storyUrl] run the extension's scripts against the live site
 const fs = require('fs');
 const path = require('path');
 const { httpGet, runScript, norm } = require('./shim');
 const D = require('./detect');
+const { pack } = require('./pack');
 
 const say = (...a) => console.log(...a);
 
@@ -159,7 +161,7 @@ function create(input, outRoot) {
   const icon = httpGet(D.abs(iconHref || '/favicon.ico', origin));
   if (icon.ok && icon.buf.length) fs.writeFileSync(path.join(dir, 'icon.png'), icon.buf);
 
-  say(`\n✔ Đã tạo ${dir}`);
+  say(`\n✔ Đã tạo ${dir}\n✔ Đóng gói ${pack(dir)}`);
   return { dir, storyUrl: story.url, notes };
 }
 
@@ -206,7 +208,9 @@ function test(dir, storyUrl) {
 
 const args = process.argv.slice(2);
 try {
-  if (args[0] === 'test') {
+  if (args[0] === 'pack') {
+    say('✔ ' + pack(path.resolve(args[1])));
+  } else if (args[0] === 'test') {
     const r = test(path.resolve(args[1]), args[2]);
     process.exit(r.detail && r.toc && r.chap ? 0 : 1);
   } else if (args[0] && /^https?:\/\//.test(args[0])) {
@@ -218,6 +222,6 @@ try {
     if (!(r.detail && r.toc && r.chap)) say('⚠ Chức năng đọc chưa chạy đủ — mở src/config.js để chỉnh selector, rồi chạy: node cli.js test ' + dir);
     process.exit(r.detail && r.toc && r.chap ? 0 : 1);
   } else {
-    say('Cách dùng:\n  node cli.js <link-truyện-hoặc-trang-chủ> [--out <thư-mục>]\n  node cli.js test <thư-mục-extension> [link-truyện]');
+    say('Cách dùng:\n  node cli.js <link-truyện-hoặc-trang-chủ> [--out <thư-mục>]\n  node cli.js test <thư-mục-extension> [link-truyện]\n  node cli.js pack <thư-mục-extension>');
   }
 } catch (e) { console.error('✘ ' + e.message); process.exit(1); }

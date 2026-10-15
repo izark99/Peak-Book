@@ -7,6 +7,7 @@ cd tools/extension-builder && npm install
 node cli.js https://truyenfull.live/                  # link trang chủ hoặc link 1 truyện
 node cli.js https://site.com/ten-truyen/ --out ./out  # chọn thư mục output
 node cli.js test ../../extensions/truyenfull.live      # chạy lại test cho extension
+node cli.js pack ../../extensions/truyenfull.live      # đóng gói lại plugin.zip sau khi sửa tay
 npm test                                               # self-check offline của heuristics
 ```
 
@@ -27,6 +28,7 @@ Mặc định extension được ghi vào `extensions/<domain>/`. Sau khi tạo,
 
 ```
 extensions/<domain>/
+  plugin.zip       bản đóng gói để cài vào app (plugin.json, icon.png, src/ ở gốc zip)
   plugin.json      metadata + map script (home, genre, detail, search, toc, chap)
   icon.png         favicon của site
   src/config.js    selector riêng của site  ← chỉ cần sửa file này khi site đổi giao diện/domain
@@ -49,5 +51,6 @@ Các trường hợp tool **không** tự xử lý được — test sẽ báo �
 - Search dùng POST hoặc site GBK cần encode từ khoá GBK.
 - Nội dung chương bị mã hoá / chống copy.
 
-Khi gặp ✘: mở `src/config.js`, sửa selector (CSS selector kiểu Jsoup), chạy `node cli.js test <thư-mục>`.
+Khi gặp ✘: mở `src/config.js`, sửa selector (CSS selector kiểu Jsoup), chạy `node cli.js test <thư-mục>`,
+rồi `node cli.js pack <thư-mục>` để cập nhật plugin.zip.
 Đặt `DEBUG=1` để xem từng request.
